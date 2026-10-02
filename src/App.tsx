@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CareProvider, useCare } from './context/CareContext';
 import { Navbar } from './components/common/Navbar';
 import { ToastContainer } from './components/common/Toast';
@@ -11,12 +11,15 @@ import { ServiceCatalog } from './components/patient/ServiceCatalog';
 import { PatientOrders } from './components/patient/PatientOrders';
 import { BookingModal } from './components/patient/BookingModal';
 import { PaymentModal } from './components/patient/PaymentModal';
+import { EReportModal } from './components/patient/EReportModal';
+import { RatingModal } from './components/patient/RatingModal';
 
 // Nurse Views
 import { NurseStatusBanner } from './components/nurse/NurseStatusBanner';
 import { NurseOrderFeed } from './components/nurse/NurseOrderFeed';
 import { NurseActiveTasks } from './components/nurse/NurseActiveTasks';
 import { NurseWallet } from './components/nurse/NurseWallet';
+import { EReportFormModal } from './components/nurse/EReportFormModal';
 
 // Admin Views
 import { AdminOverview } from './components/admin/AdminOverview';
@@ -25,13 +28,17 @@ import { ServiceCatalogCrud } from './components/admin/ServiceCatalogCrud';
 import { EscrowMonitoring } from './components/admin/EscrowMonitoring';
 import { PayoutManagement } from './components/admin/PayoutManagement';
 
+// Figma Snapshot Navigator Helper
+import { FigmaSnapshotNavigator, FIGMA_SCREENS } from './components/common/FigmaSnapshotNavigator';
+
 // Types
 import { Booking, MedicalService, UserRole } from './types';
 import { HeartHandshake, CheckCircle2, Sparkles } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { currentUser, switchUserById } = useCare();
+  const { currentUser, switchUserById, services, bookings } = useCare();
 
+  const [currentScreenId, setCurrentScreenId] = useState<string>('landing');
   const [activeTab, setActiveTab] = useState<string>('services');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -41,6 +48,169 @@ const MainContent: React.FC = () => {
   // Booking & Payment modals for patients
   const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<MedicalService | null>(null);
   const [activeBookingForPayment, setActiveBookingForPayment] = useState<Booking | null>(null);
+
+  // Modals for Figma snapshot previews
+  const [previewBookingForReport, setPreviewBookingForReport] = useState<Booking | null>(null);
+  const [previewBookingForRating, setPreviewBookingForRating] = useState<Booking | null>(null);
+  const [previewBookingForReportForm, setPreviewBookingForReportForm] = useState<Booking | null>(null);
+
+  const closeAllModals = useCallback(() => {
+    setIsAuthModalOpen(false);
+    setSelectedServiceForBooking(null);
+    setActiveBookingForPayment(null);
+    setPreviewBookingForReport(null);
+    setPreviewBookingForRating(null);
+    setPreviewBookingForReportForm(null);
+  }, []);
+
+  const handleSelectScreen = useCallback(
+    (screenId: string) => {
+      setCurrentScreenId(screenId);
+      if (window.location.hash !== '#' + screenId) {
+        window.location.hash = '#' + screenId;
+      }
+      closeAllModals();
+
+      const completedBooking =
+        bookings.find((b) => b.status === 'COMPLETED' && b.eReport) || bookings[0];
+      const pendingBooking =
+        bookings.find((b) => b.status === 'PENDING_PAYMENT') || bookings[0];
+      const activeBooking =
+        bookings.find((b) => b.status === 'IN_PROGRESS' || b.status === 'EN_ROUTE') || bookings[0];
+      const targetService = services[0] || null;
+
+      switch (screenId) {
+        // 1. Publik & Auth
+        case 'landing':
+          setIsViewingLanding(true);
+          break;
+        case 'auth-login':
+          setIsViewingLanding(true);
+          setIsAuthModalOpen(true);
+          setAuthMode('login');
+          setAuthDefaultRole('patient');
+          break;
+        case 'auth-register-patient':
+          setIsViewingLanding(true);
+          setIsAuthModalOpen(true);
+          setAuthMode('register');
+          setAuthDefaultRole('patient');
+          break;
+        case 'auth-register-nurse':
+          setIsViewingLanding(true);
+          setIsAuthModalOpen(true);
+          setAuthMode('register');
+          setAuthDefaultRole('nurse');
+          break;
+
+        // 2. Pasien
+        case 'patient-services':
+          switchUserById('usr-patient-01');
+          setIsViewingLanding(false);
+          setActiveTab('services');
+          break;
+        case 'patient-booking':
+          switchUserById('usr-patient-01');
+          setIsViewingLanding(false);
+          setActiveTab('services');
+          setSelectedServiceForBooking(targetService);
+          break;
+        case 'patient-payment':
+          switchUserById('usr-patient-01');
+          setIsViewingLanding(false);
+          setActiveTab('orders');
+          setActiveBookingForPayment(pendingBooking);
+          break;
+        case 'patient-orders':
+          switchUserById('usr-patient-01');
+          setIsViewingLanding(false);
+          setActiveTab('orders');
+          break;
+        case 'patient-ereport':
+          switchUserById('usr-patient-01');
+          setIsViewingLanding(false);
+          setActiveTab('orders');
+          setPreviewBookingForReport(completedBooking);
+          break;
+        case 'patient-rating':
+          switchUserById('usr-patient-01');
+          setIsViewingLanding(false);
+          setActiveTab('orders');
+          setPreviewBookingForRating(completedBooking);
+          break;
+
+        // 3. Perawat
+        case 'nurse-feed':
+          switchUserById('usr-nurse-01');
+          setIsViewingLanding(false);
+          setActiveTab('feed');
+          break;
+        case 'nurse-active':
+          switchUserById('usr-nurse-01');
+          setIsViewingLanding(false);
+          setActiveTab('active-task');
+          break;
+        case 'nurse-ereport-form':
+          switchUserById('usr-nurse-01');
+          setIsViewingLanding(false);
+          setActiveTab('active-task');
+          setPreviewBookingForReportForm(activeBooking);
+          break;
+        case 'nurse-wallet':
+          switchUserById('usr-nurse-01');
+          setIsViewingLanding(false);
+          setActiveTab('wallet');
+          break;
+
+        // 4. Admin
+        case 'admin-overview':
+          switchUserById('usr-admin-01');
+          setIsViewingLanding(false);
+          setActiveTab('overview');
+          break;
+        case 'admin-verification':
+          switchUserById('usr-admin-01');
+          setIsViewingLanding(false);
+          setActiveTab('verification');
+          break;
+        case 'admin-services':
+          switchUserById('usr-admin-01');
+          setIsViewingLanding(false);
+          setActiveTab('services-crud');
+          break;
+        case 'admin-escrow':
+          switchUserById('usr-admin-01');
+          setIsViewingLanding(false);
+          setActiveTab('escrow');
+          break;
+        case 'admin-payouts':
+          switchUserById('usr-admin-01');
+          setIsViewingLanding(false);
+          setActiveTab('payouts');
+          break;
+        default:
+          break;
+      }
+    },
+    [bookings, services, switchUserById, closeAllModals]
+  );
+
+  const handleSelectScreenRef = React.useRef(handleSelectScreen);
+  handleSelectScreenRef.current = handleSelectScreen;
+
+  // Sync hash on initial load or browser forward/back
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && FIGMA_SCREENS.some((s) => s.id === hash)) {
+        handleSelectScreenRef.current(hash);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   // Auto-adjust default tab when user switches role
   useEffect(() => {
@@ -225,6 +395,31 @@ const MainContent: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authMode}
         defaultRole={authDefaultRole}
+      />
+
+      {/* Figma Snapshot Preview Modals */}
+      <EReportModal
+        isOpen={Boolean(previewBookingForReport)}
+        onClose={() => setPreviewBookingForReport(null)}
+        booking={previewBookingForReport}
+      />
+
+      <RatingModal
+        isOpen={Boolean(previewBookingForRating)}
+        onClose={() => setPreviewBookingForRating(null)}
+        booking={previewBookingForRating}
+      />
+
+      <EReportFormModal
+        isOpen={Boolean(previewBookingForReportForm)}
+        onClose={() => setPreviewBookingForReportForm(null)}
+        booking={previewBookingForReportForm}
+      />
+
+      {/* Floating Figma Snapshot Navigator */}
+      <FigmaSnapshotNavigator
+        currentScreenId={currentScreenId}
+        onSelectScreen={handleSelectScreen}
       />
 
       {/* Footer with HomeCare branding */}

@@ -100,6 +100,13 @@ export const CareLevelBadge: React.FC<{ level: CareLevel }> = ({ level }) => {
 };
 
 export const EscrowBadge: React.FC<{ status: EscrowStatus }> = ({ status }) => {
+  if (status === 'PENDING') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+        <ShieldCheck className="w-3.5 h-3.5 text-slate-500" /> Menunggu Pembayaran
+      </span>
+    );
+  }
   if (status === 'HELD') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">

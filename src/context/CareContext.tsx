@@ -110,7 +110,7 @@ interface CareContextType {
   };
 }
 
-const STORAGE_KEY = 'homecare_db_v2';
+const STORAGE_KEY = 'homecare_db_v3';
 
 const CareContext = createContext<CareContextType | undefined>(undefined);
 

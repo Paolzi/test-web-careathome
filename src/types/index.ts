@@ -13,7 +13,7 @@ export type BookingStatus =
   | 'COMPLETED'     // Done & E-Report filled
   | 'CANCELLED';
 
-export type EscrowStatus = 'HELD' | 'RELEASED' | 'REFUNDED';
+export type EscrowStatus = 'PENDING' | 'HELD' | 'RELEASED' | 'REFUNDED';
 
 export type PaymentMethod = 'BCA_VA' | 'MANDIRI_VA' | 'QRIS' | 'GOPAY';
 
